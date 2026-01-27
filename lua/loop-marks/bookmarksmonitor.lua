@@ -10,7 +10,8 @@ local M               = {}
 local _init_done      = false
 
 local _sign_group     = "bookmarks"
-local _sign_name      = "bookmark" -- single sign name
+local _bookmark_sign_name      = "bookmark" -- single sign name
+local _note_sign_name      = "note" -- single sign name
 
 ---@class loopmarks.BookmarkData
 ---@field bookmark loopmarks.Bookmark
@@ -38,7 +39,8 @@ end
 
 ---@param bm loopmarks.Bookmark
 local function _place_bookmark_sign(bm)
-    signsmgr.place_file_sign(bm.id, bm.file, bm.line, _sign_group, _sign_name)
+    local sign = (bm.note and bm.note ~= "") and _note_sign_name or _bookmark_sign_name
+    signsmgr.place_file_sign(bm.id, bm.file, bm.line, _sign_group, sign)
 end
 
 -- ──────────────────────────────────────────────────────────────────────────────
@@ -157,15 +159,24 @@ function M.init()
     assert(config.current)
 
     -- Highlight group (feel free to change link or define your own)
-    vim.api.nvim_set_hl(0, "LoopBookmarkSign", { link = "Todo" }) -- or "Special", "WarningMsg", etc.
+    local hl = "LoopBookmarksSign"
+    vim.api.nvim_set_hl(0, hl, { link = "Todo" }) -- or "Special", "WarningMsg", etc.
 
     -- Define single sign
     signsmgr.define_sign_group(_sign_group, config.current.sign_priority or 100)
+
     signsmgr.define_sign(
         _sign_group,
-        _sign_name,
+        _bookmark_sign_name,
         config.current.mark_symbol,
-        "LoopBookmarkSign"
+        hl
+    )
+
+    signsmgr.define_sign(
+        _sign_group,
+        _note_sign_name,
+        config.current.note_symbol,
+        hl
     )
 
     _enable_bookmark_sync_on_save()
