@@ -1,0 +1,8 @@
+{
+        // If you really need to teach the language server about Neovim's runtime Lua files
+    // (only useful if you write Neovim config/plugins in VS Code)
+    "Lua.workspace.library": [
+        "/Users/Dev/.config/nvim/pack/plugins/opt/loop.nvim/lua",
+        // add more specific folders if needed, or leave empty if not editing Neovim Lua
+    ],
+}
