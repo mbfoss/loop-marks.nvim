@@ -16,6 +16,8 @@ local _note_sign_name     = "note"     -- single sign name
 
 ---@class loopmarks.BookmarkData
 ---@field bookmark loopmarks.Bookmark
+
+---@type table<number, loopmarks.BookmarkData>
 local _bookmarks_data     = {}
 
 ---@param bm loopmarks.Bookmark
@@ -62,7 +64,7 @@ end
 
 local function _on_bookmark_removed(bm)
     _bookmarks_data[bm.id] = nil
-    signsmgr.remove_file_sign(bm.id, _sign_group)
+    extmarks.remove_file_extmark(bm.id, _sign_group)
 end
 
 local function _on_all_bookmarks_removed(removed)
@@ -72,7 +74,7 @@ local function _on_all_bookmarks_removed(removed)
         files[bm.file] = true
     end
     for file in pairs(files) do
-        signsmgr.remove_file_signs(file, _sign_group)
+        extmarks.remove_file_extmarks(file, _sign_group)
     end
 end
 
