@@ -139,7 +139,7 @@ function M.init()
     vim.api.nvim_set_hl(0, hl, { link = "Todo" }) -- or "Special", "WarningMsg", etc.
 
     -- Define single sign
-    signsmgr.define_sign_group(_sign_group, config.current.sign_priority or 100)
+    signsmgr.define_sign_group(_sign_group, config.current.sign_priority or 50)
 
     signsmgr.define_sign(
         _sign_group,
