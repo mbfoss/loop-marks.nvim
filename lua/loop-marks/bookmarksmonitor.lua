@@ -1,6 +1,7 @@
 local config              = require('loop-marks.config')
 local bookmarks           = require('loop-marks.bookmarks')
 local signsmgr            = require('loop.signsmgr')
+local extmarks            = require('loop.extmarks')
 local selector            = require("loop.tools.selector")
 local wsinfo              = require("loop.wsinfo")
 local uitools             = require("loop.tools.uitools")
@@ -10,8 +11,8 @@ local M                   = {}
 local _init_done          = false
 
 local _sign_group         = "bookmarks"
-local _bookmark_sign_name = "bookmark"      -- single sign name
-local _note_sign_name     = "note"          -- single sign name
+local _bookmark_sign_name = "bookmark" -- single sign name
+local _note_sign_name     = "note"     -- single sign name
 
 ---@class loopmarks.BookmarkData
 ---@field bookmark loopmarks.Bookmark
@@ -39,10 +40,14 @@ end
 
 ---@param bm loopmarks.Bookmark
 local function _place_bookmark_sign(bm)
-    local sign = (bm.note and bm.note ~= "") and _note_sign_name or _bookmark_sign_name
-    signsmgr.place_file_sign(bm.id, bm.file, bm.line, _sign_group, sign)
     if bm.note and bm.note ~= "" then
-        --signsmgr.set_virtual_text(bm.id, bm.file, bm.line, _sign_group, { { bm.note, "Comment" } })
+        vim.notify(vim.inspect(bm.id))
+        local text = ("%s %s"):format(config.current.note_symbol, bm.note)
+        extmarks.place_file_extmark(bm.id, bm.file, bm.line, 0, _sign_group, {
+            virt_text = { { text, "Todo" } }, virt_text_pos = "eol" }
+        )
+    else
+        signsmgr.place_file_sign(bm.id, bm.file, bm.line, _sign_group, _bookmark_sign_name)
     end
 end
 
@@ -139,7 +144,14 @@ function M.init()
     vim.api.nvim_set_hl(0, hl, { link = "Todo" }) -- or "Special", "WarningMsg", etc.
 
     -- Define single sign
-    signsmgr.define_sign_group(_sign_group, config.current.sign_priority or 50)
+    signsmgr.define_sign_group(_sign_group, config.current.sign_priority,
+        function(file, signs)
+            for id, sign in pairs(signs) do
+                assert(sign.group == _sign_group)
+                -- Update bookmark line to match sign
+                bookmarks.update_bookmark_line(id, sign.lnum)
+            end
+        end)
 
     signsmgr.define_sign(
         _sign_group,
@@ -147,15 +159,6 @@ function M.init()
         config.current.mark_symbol,
         hl
     )
-
-    signsmgr.define_sign(
-        _sign_group,
-        _note_sign_name,
-        config.current.note_symbol,
-        hl
-    )
-
-    -- TODO: subscribe to signs move / update by signsmgr
 
     bookmarks.add_tracker({
         on_set         = _on_bookmark_set,

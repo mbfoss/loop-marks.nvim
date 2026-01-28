@@ -2,6 +2,7 @@ local M = {}
 
 local Trackers = require("loop.tools.Trackers")
 local uitools = require("loop.tools.uitools")
+local floatwin = require("loop.tools.floatwin")
 local wsinfo = require('loop.wsinfo')
 
 ---@class loopmarks.Bookmark
@@ -258,7 +259,7 @@ function M.bookmarks_command(command)
     elseif command == "note" then
         local file, line = uitools.get_current_file_and_line()
         if file and line then
-            vim.ui.input({ prompt = "Enter bookmark note: " }, function(message)
+           floatwin.input_at_cursor({ prompt = "Enter bookmark note: " }, function(message)
                 if message and message ~= "" then
                     M.set_note_bookmark(file, line, message)
                     print("Bookmark set at " .. file .. ":" .. line)
