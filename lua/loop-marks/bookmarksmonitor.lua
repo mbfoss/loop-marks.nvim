@@ -1,21 +1,21 @@
-local config          = require('loop-marks.config')
-local bookmarks       = require('loop-marks.bookmarks')
-local signsmgr        = require('loop.signsmgr')
-local selector        = require("loop.tools.selector")
-local wsinfo          = require("loop.wsinfo")
-local uitools         = require("loop.tools.uitools")
+local config              = require('loop-marks.config')
+local bookmarks           = require('loop-marks.bookmarks')
+local signsmgr            = require('loop.signsmgr')
+local selector            = require("loop.tools.selector")
+local wsinfo              = require("loop.wsinfo")
+local uitools             = require("loop.tools.uitools")
 
-local M               = {}
+local M                   = {}
 
-local _init_done      = false
+local _init_done          = false
 
-local _sign_group     = "bookmarks"
-local _bookmark_sign_name      = "bookmark" -- single sign name
-local _note_sign_name      = "note" -- single sign name
+local _sign_group         = "bookmarks"
+local _bookmark_sign_name = "bookmark"      -- single sign name
+local _note_sign_name     = "note"          -- single sign name
 
 ---@class loopmarks.BookmarkData
 ---@field bookmark loopmarks.Bookmark
-local _bookmarks_data = {}
+local _bookmarks_data     = {}
 
 ---@param bm loopmarks.Bookmark
 local function _format_bookmark(bm)
@@ -41,6 +41,9 @@ end
 local function _place_bookmark_sign(bm)
     local sign = (bm.note and bm.note ~= "") and _note_sign_name or _bookmark_sign_name
     signsmgr.place_file_sign(bm.id, bm.file, bm.line, _sign_group, sign)
+    if bm.note and bm.note ~= "" then
+        --signsmgr.set_virtual_text(bm.id, bm.file, bm.line, _sign_group, { { bm.note, "Comment" } })
+    end
 end
 
 -- ──────────────────────────────────────────────────────────────────────────────
@@ -75,33 +78,6 @@ local function _on_bookmark_moved(bm, _old_line)
     -- But to be safe / consistent:
     signsmgr.remove_file_sign(bm.id, _sign_group)
     _place_bookmark_sign(bm)
-end
-
--- ──────────────────────────────────────────────────────────────────────────────
---  Sync line changes on save (very useful for bookmarks too)
--- ──────────────────────────────────────────────────────────────────────────────
-
-local function _enable_bookmark_sync_on_save()
-    local group = vim.api.nvim_create_augroup("LoopBookmarkSyncOnSave", { clear = true })
-    vim.api.nvim_create_autocmd("BufWritePost", {
-        group = group,
-        callback = function(ev)
-            local bufnr = ev.buf
-            if not vim.api.nvim_buf_is_valid(bufnr) then return end
-            if vim.bo[bufnr].buftype ~= "" then return end
-
-            local file = vim.api.nvim_buf_get_name(bufnr)
-            if file == "" then return end
-            file = vim.fn.fnamemodify(file, ":p")
-
-            local signs_by_id = signsmgr.get_file_signs_by_id(file)
-            for id, sign in pairs(signs_by_id) do
-                if sign.group == _sign_group then
-                    bookmarks.update_bookmark_line(id, sign.lnum)
-                end
-            end
-        end,
-    })
 end
 
 -- ──────────────────────────────────────────────────────────────────────────────
@@ -179,7 +155,7 @@ function M.init()
         hl
     )
 
-    _enable_bookmark_sync_on_save()
+    -- TODO: subscribe to signs move / update by signsmgr
 
     bookmarks.add_tracker({
         on_set         = _on_bookmark_set,
