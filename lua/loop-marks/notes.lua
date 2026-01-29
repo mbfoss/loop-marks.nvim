@@ -13,10 +13,10 @@ local wsinfo = require('loop.wsinfo')
 ---@field text string
 
 ---@class loopmarks.notes.Tracker
----@field on_set fun(bm:loopmarks.Note)|nil
----@field on_removed fun(bm:loopmarks.Note)|nil
+---@field on_set fun(nd:loopmarks.Note)|nil
+---@field on_removed fun(nd:loopmarks.Note)|nil
 ---@field on_all_removed fun(bms:loopmarks.Note[])|nil
----@field on_moved fun(bm:loopmarks.Note,old_line:number)|nil
+---@field on_moved fun(nd:loopmarks.Note,old_line:number)|nil
 
 local _last_note_id = 1000
 
@@ -39,8 +39,8 @@ function M.add_tracker(callbacks, no_snapshot)
         ---@type loopmarks.Note[]
         local current = vim.tbl_values(_by_id)
         if callbacks.on_set then
-            for _, bm in ipairs(current) do
-                callbacks.on_set(bm)
+            for _, nd in ipairs(current) do
+                callbacks.on_set(nd)
             end
         end
     end
@@ -82,11 +82,11 @@ local function _remove_source_note(file, line)
     if not lines then return false end
     local id = lines[line]
     if not id then return false end
-    local bm = _by_id[id]
-    if bm then
+    local nd = _by_id[id]
+    if nd then
         lines[line] = nil
         _by_id[id] = nil
-        _trackers:invoke("on_removed", bm)
+        _trackers:invoke("on_removed", nd)
     end
     return true
 end
@@ -97,15 +97,15 @@ local function _clear_file_notes(file)
     local removed = {}
     if not lines then return end
     for _, id in pairs(lines) do
-        local bm = _by_id[id]
-        if bm then
-            table.insert(removed, bm)
+        local nd = _by_id[id]
+        if nd then
+            table.insert(removed, nd)
             _by_id[id] = nil
         end
     end
     _source_notes[file] = nil
-    for _, bm in pairs(removed) do
-        _trackers:invoke("on_removed", bm)
+    for _, nd in pairs(removed) do
+        _trackers:invoke("on_removed", nd)
     end
 end
 
@@ -129,17 +129,17 @@ local function _set_source_note(file, line, text)
     local id = _last_note_id + 1
     _last_note_id = id
     ---@type loopmarks.Note
-    local bm = {
+    local nd = {
         id = id,
         file = file,
         line = line,
         text = text
     }
-    _by_id[id] = bm
+    _by_id[id] = nd
     _source_notes[file] = _source_notes[file] or {}
     local lines = _source_notes[file]
     lines[line] = id
-    _trackers:invoke("on_set", bm)
+    _trackers:invoke("on_set", nd)
     return true
 end
 
@@ -153,7 +153,7 @@ end
 ---@param file string
 ---@param lnum number
 ---@param message string
-function M.set_named_note(file, lnum, message)
+function M.set_note(file, lnum, message)
     if type(message) == "string" and #message > 0 then
         file = _norm(file)
         _remove_source_note(file, lnum)
@@ -161,23 +161,35 @@ function M.set_named_note(file, lnum, message)
     end
 end
 
+---@param file string
+---@param lnum number
+---@return string? mesage
+function M.get_note(file, lnum)
+    local lines = _source_notes[file]
+    if not lines then return end
+    local id = lines[lnum]
+    if not id then return end
+    local nd = _by_id[id]
+    return nd and nd.text
+end
+
 ---@param id number
 ---@param newline number
 ---@return boolean
 function M.update_note_line(id, newline)
-    local bm = _by_id[id]
-    if not bm or bm.line == newline then
+    local nd = _by_id[id]
+    if not nd or nd.line == newline then
         return false
     end
-    local old_line = bm.line
-    local file = bm.file
+    local old_line = nd.line
+    local file = nd.file
     local lines = _source_notes[file]
     if lines then
         lines[old_line] = nil
         lines[newline] = id
     end
-    bm.line = newline
-    _trackers:invoke("on_moved", bm, old_line)
+    nd.line = newline
+    _trackers:invoke("on_moved", nd, old_line)
     return true
 end
 
@@ -195,8 +207,8 @@ end
 function M.get_notes()
     ---@type loopmarks.Note[]
     local bms = {}
-    for _, bm in pairs(_by_id) do
-        table.insert(bms, bm)
+    for _, nd in pairs(_by_id) do
+        table.insert(bms, nd)
     end
     return bms
 end
@@ -208,11 +220,11 @@ local function _set_notes(notes)
         if a.file ~= b.file then return a.file < b.file end
         return a.line < b.line
     end)
-    for _, bm in ipairs(notes) do
-        local file = vim.fn.fnamemodify(bm.file, ":p")
+    for _, nd in ipairs(notes) do
+        local file = vim.fn.fnamemodify(nd.file, ":p")
         _set_source_note(file,
-            bm.line,
-            bm.text
+            nd.line,
+            nd.text
         )
     end
     return true, nil
@@ -222,10 +234,10 @@ function M.have_notes()
     return next(_by_id) ~= nil
 end
 
----@param handler fun(bm:loopmarks.Note)
+---@param handler fun(nd:loopmarks.Note)
 function M.for_each(handler)
-    for _, bm in pairs(_by_id) do
-        handler(bm)
+    for _, nd in pairs(_by_id) do
+        handler(nd)
     end
 end
 
@@ -242,12 +254,13 @@ function M.notes_command(command)
         return
     end
     command = command and command:match("^%s*(.-)%s*$") or ""
-    if command == "set" then
+    if command == "" or command == "set" then
         local file, line = uitools.get_current_file_and_line()
         if file and line then
-            floatwin.input_at_cursor({ prompt = "Note" }, function(message)
+            local note = M.get_note(file, line)
+            floatwin.input_at_cursor({ prompt = "Note", default_text = note }, function(message)
                 if message and message ~= "" then
-                    M.set_named_note(file, line, message)
+                    M.set_note(file, line, message)
                 end
             end)
         end

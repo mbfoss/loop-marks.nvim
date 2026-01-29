@@ -25,7 +25,7 @@ end
 ---@param opts vim.api.keyset.create_user_command.command_args
 local function _do_command(args, opts)
     local cmd = args[1]
-    if not cmd or cmd == "" or cmd == "list" then
+    if cmd == "list" then
         notesmonitor.select_note()
     else
         notes.notes_command(cmd)

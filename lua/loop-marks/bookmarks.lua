@@ -259,7 +259,7 @@ function M.bookmarks_command(command)
         return
     end
     command = command and command:match("^%s*(.-)%s*$") or ""
-    if command == "set" then
+    if command == "" or command == "set" then
         local file, line = uitools.get_current_file_and_line()
         if file and line then
             M.set_bookmark(file, line)
