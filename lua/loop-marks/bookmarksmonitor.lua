@@ -12,7 +12,6 @@ local _init_done          = false
 
 local _sign_group         = "bookmarks"
 local _bookmark_sign_name = "bookmark" -- single sign name
-local _note_sign_name     = "note"     -- single sign name
 
 ---@class loopmarks.BookmarkData
 ---@field bookmark loopmarks.Bookmark
@@ -33,8 +32,8 @@ local function _format_bookmark(bm)
     table.insert(parts, ":")
     table.insert(parts, tostring(bm.line))
 
-    if bm.note and bm.note ~= "" then
-        table.insert(parts, "  →  " .. bm.note:gsub("\n", " "))
+    if bm.name and bm.name ~= "" then
+        table.insert(parts, "  →  " .. bm.name:gsub("\n", " "))
     end
 
     return table.concat(parts, '')
@@ -42,15 +41,7 @@ end
 
 ---@param bm loopmarks.Bookmark
 local function _place_bookmark_sign(bm)
-    if bm.note and bm.note ~= "" then
-        vim.notify(vim.inspect(bm.id))
-        local text = ("%s %s"):format(config.current.note_symbol, bm.note)
-        extmarks.place_file_extmark(bm.id, bm.file, bm.line, 0, _sign_group, {
-            virt_text = { { text, "Todo" } }, virt_text_pos = "eol" }
-        )
-    else
-        signsmgr.place_file_sign(bm.id, bm.file, bm.line, _sign_group, _bookmark_sign_name)
-    end
+    signsmgr.place_file_sign(bm.id, bm.file, bm.line, _sign_group, _bookmark_sign_name)
 end
 
 -- ──────────────────────────────────────────────────────────────────────────────

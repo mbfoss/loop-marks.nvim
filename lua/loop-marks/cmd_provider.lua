@@ -10,8 +10,9 @@ local bookmarksmonitor = require("loop-marks.bookmarksmonitor")
 local function _bookmarks_commands(args)
     if #args == 0 then
         return {
-            "toggle",
-            "note",
+            "set",
+            "name",
+            "remove",
             "list",
             "clear_file",
             "clear_all"
@@ -24,10 +25,10 @@ end
 ---@param opts vim.api.keyset.create_user_command.command_args
 local function _do_command(args, opts)
     local cmd = args[1]
-    if cmd == "list" then
+    if not cmd or cmd == "" or cmd == "list" then
         bookmarksmonitor.select_bookmark()
     else
-    bookmarks.bookmarks_command(cmd)
+        bookmarks.bookmarks_command(cmd)
     end
 end
 

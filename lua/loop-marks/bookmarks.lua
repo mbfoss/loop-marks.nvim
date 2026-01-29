@@ -10,7 +10,7 @@ local wsinfo = require('loop.wsinfo')
 ---@field file string
 ---@field line integer
 ---@field column integer|nil
----@field note string|nil
+---@field name string|nil
 
 ---@class loopmarks.bookmarks.Tracker
 ---@field on_set fun(bm:loopmarks.Bookmark)|nil
@@ -120,9 +120,9 @@ end
 --- Add a new bookmark.
 ---@param file string File path
 ---@param line integer Line number
----@param note? string Optional note
+---@param name? string Optional name
 ---@return boolean added
-local function _set_source_bookmark(file, line, note)
+local function _set_source_bookmark(file, line, name)
     if _have_source_bookmark(file, line) then
         return false
     end
@@ -133,7 +133,7 @@ local function _set_source_bookmark(file, line, note)
         id = id,
         file = file,
         line = line,
-        note = note
+        name = name
     }
     _by_id[id] = bm
     _source_bookmarks[file] = _source_bookmarks[file] or {}
@@ -162,8 +162,15 @@ end
 
 ---@param file string
 ---@param lnum number
+function M.remove_bookmark(file, lnum)
+    file = _norm(file)
+     _remove_source_bookmark(file, lnum)
+end
+
+---@param file string
+---@param lnum number
 ---@param message string
-function M.set_note_bookmark(file, lnum, message)
+function M.set_named_bookmark(file, lnum, message)
     if type(message) == "string" and #message > 0 then
         file = _norm(file)
         _remove_source_bookmark(file, lnum)
@@ -222,7 +229,7 @@ local function _set_bookmarks(bookmarks)
         local file = vim.fn.fnamemodify(bm.file, ":p")
         _set_source_bookmark(file,
             bm.line,
-            bm.note
+            bm.name
         )
     end
     return true, nil
@@ -240,8 +247,9 @@ function M.for_each(handler)
 end
 
 ---@param command nil
----| "toggle"
----| "note"
+---| "set"
+---| "name"
+---| "remove"
 ---| "clear_file"
 ---| "clear_all"
 function M.bookmarks_command(command)
@@ -251,17 +259,22 @@ function M.bookmarks_command(command)
         return
     end
     command = command and command:match("^%s*(.-)%s*$") or ""
-    if command == "" or command == "toggle" then
+    if command == "set" then
         local file, line = uitools.get_current_file_and_line()
         if file and line then
-            M.toggle_bookmark(file, line)
+            M.set_bookmark(file, line)
         end
-    elseif command == "note" then
+    elseif command == "remove" then
         local file, line = uitools.get_current_file_and_line()
         if file and line then
-           floatwin.input_at_cursor({ prompt = "Enter bookmark note: " }, function(message)
+            M.remove_bookmark(file, line)
+        end  
+    elseif command == "name" then
+        local file, line = uitools.get_current_file_and_line()
+        if file and line then
+           floatwin.input_at_cursor({ prompt = "Enter bookmark name: " }, function(message)
                 if message and message ~= "" then
-                    M.set_note_bookmark(file, line, message)
+                    M.set_named_bookmark(file, line, message)
                     print("Bookmark set at " .. file .. ":" .. line)
                 end
             end)
