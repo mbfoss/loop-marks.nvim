@@ -245,10 +245,9 @@ function M.notes_command(command)
     if command == "set" then
         local file, line = uitools.get_current_file_and_line()
         if file and line then
-            floatwin.input_at_cursor({ prompt = "Enter note text: " }, function(message)
+            floatwin.input_at_cursor({ prompt = "Note" }, function(message)
                 if message and message ~= "" then
                     M.set_named_note(file, line, message)
-                    print("Note set at " .. file .. ":" .. line)
                 end
             end)
         end
