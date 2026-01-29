@@ -1,26 +1,24 @@
-local config              = require('loop-marks.config')
-local bookmarks           = require('loop-marks.bookmarks')
-local signsmgr            = require('loop.signsmgr')
-local extmarks            = require('loop.extmarks')
-local selector            = require("loop.tools.selector")
-local wsinfo              = require("loop.wsinfo")
-local uitools             = require("loop.tools.uitools")
+local config      = require('loop-marks.config')
+local notes       = require('loop-marks.notes')
+local extmarks    = require('loop.extmarks')
+local selector    = require("loop.tools.selector")
+local wsinfo      = require("loop.wsinfo")
+local uitools     = require("loop.tools.uitools")
 
-local M                   = {}
+local M           = {}
 
-local _init_done          = false
+local _init_done  = false
 
-local _sign_group         = "bookmarks"
-local _bookmark_sign_name = "bookmark" -- single sign name
+local _sign_group = "notes"
 
----@class loopmarks.BookmarkData
----@field bookmark loopmarks.Bookmark
+---@class loopmarks.NoteData
+---@field note loopmarks.Note
 
----@type table<number, loopmarks.BookmarkData>
-local _bookmarks_data     = {}
+---@type table<number, loopmarks.NoteData>
+local _notes_data = {}
 
----@param bm loopmarks.Bookmark
-local function _format_bookmark(bm)
+---@param bm loopmarks.Note
+local function _format_note(bm)
     local file = bm.file
     local wsdir = wsinfo.get_ws_dir()
     if wsdir then
@@ -31,35 +29,35 @@ local function _format_bookmark(bm)
     table.insert(parts, file)
     table.insert(parts, ":")
     table.insert(parts, tostring(bm.line))
-
-    if bm.name and bm.name ~= "" then
-        table.insert(parts, "  →  " .. bm.name:gsub("\n", " "))
-    end
-
+    table.insert(parts, "  →  " .. bm.text:gsub("\n", " "))
     return table.concat(parts, '')
 end
 
----@param bm loopmarks.Bookmark
-local function _place_bookmark_sign(bm)
-    signsmgr.place_file_sign(bm.id, bm.file, bm.line, _sign_group, _bookmark_sign_name)
+---@param bm loopmarks.Note
+local function _place_note_sign(bm)
+    local text = (" %s %s"):format(config.current.note_symbol, bm.text or "Note")
+    extmarks.place_file_extmark(bm.id, bm.file, bm.line, 0, _sign_group, {
+        virt_text = {{text, "Todo"}},
+        virt_text_pos = "eol",
+    })
 end
 
 -- ──────────────────────────────────────────────────────────────────────────────
 --  Event handlers
 -- ──────────────────────────────────────────────────────────────────────────────
 
-local function _on_bookmark_set(bm)
-    _bookmarks_data[bm.id] = { bookmark = bm }
-    _place_bookmark_sign(bm)
+local function _on_note_set(bm)
+    _notes_data[bm.id] = { note = bm }
+    _place_note_sign(bm)
 end
 
-local function _on_bookmark_removed(bm)
-    _bookmarks_data[bm.id] = nil
+local function _on_note_removed(bm)
+    _notes_data[bm.id] = nil
     extmarks.remove_file_extmark(bm.id, _sign_group)
 end
 
-local function _on_all_bookmarks_removed(removed)
-    _bookmarks_data = {}
+local function _on_all_notes_removed(removed)
+    _notes_data = {}
     local files = {}
     for _, bm in ipairs(removed) do
         files[bm.file] = true
@@ -69,36 +67,36 @@ local function _on_all_bookmarks_removed(removed)
     end
 end
 
-local function _on_bookmark_moved(bm, _old_line)
-    local data = _bookmarks_data[bm.id]
+local function _on_note_moved(bm, _old_line)
+    local data = _notes_data[bm.id]
     if not data then return end
     -- Neovim already moved the sign → we just re-place if needed (usually not required)
     -- But to be safe / consistent:
-    signsmgr.remove_file_sign(bm.id, _sign_group)
-    _place_bookmark_sign(bm)
+    extmarks.remove_file_extmark(bm.id, _sign_group)
+    _place_note_sign(bm)
 end
 
 -- ──────────────────────────────────────────────────────────────────────────────
---  UI: Quick jump to any bookmark
+--  UI: Quick jump to any note
 -- ──────────────────────────────────────────────────────────────────────────────
 
-function M.select_bookmark()
+function M.select_note()
     local ws_dir = wsinfo.get_ws_dir()
     if not ws_dir then
         vim.notify('No active workspace')
         return
     end
 
-    local bms = bookmarks.get_bookmarks()
+    local bms = notes.get_notes()
     if #bms == 0 then
-        vim.notify('No bookmarks set')
+        vim.notify('No notes set')
         return
     end
 
     local choices = {}
     for _, bm in ipairs(bms) do
         table.insert(choices, {
-            label = _format_bookmark(bm),
+            label = _format_note(bm),
             file  = bm.file,
             line  = bm.line,
             data  = bm,
@@ -111,7 +109,7 @@ function M.select_bookmark()
     end)
 
     selector.select({
-        prompt = "Bookmarks",
+        prompt = "Notes",
         items = choices,
         file_preview = true,
         callback = function(selected)
@@ -133,31 +131,23 @@ function M.init()
     assert(config.current)
 
     -- Highlight group (feel free to change link or define your own)
-    local hl = "LoopmarksBookmarksSign"
+    local hl = "LoopmarksNotesSign"
     vim.api.nvim_set_hl(0, hl, { link = "Todo" }) -- or "Special", "WarningMsg", etc.
 
     -- Define single sign
-    signsmgr.define_sign_group(_sign_group, config.current.sign_priority,
-        function(file, signs)
-            for id, sign in pairs(signs) do
-                assert(sign.group == _sign_group)
-                -- Update bookmark line to match sign
-                bookmarks.update_bookmark_line(id, sign.lnum)
+    extmarks.define_group(_sign_group, { priority = config.current.sign_priority },
+        function(file, marks)
+            for id, mark in pairs(marks) do
+                -- Update note line to match sign
+                notes.update_note_line(id, mark.lnum)
             end
         end)
 
-    signsmgr.define_sign(
-        _sign_group,
-        _bookmark_sign_name,
-        config.current.mark_symbol,
-        hl
-    )
-
-    bookmarks.add_tracker({
-        on_set         = _on_bookmark_set,
-        on_removed     = _on_bookmark_removed,
-        on_all_removed = _on_all_bookmarks_removed,
-        on_moved       = _on_bookmark_moved,
+    notes.add_tracker({
+        on_set         = _on_note_set,
+        on_removed     = _on_note_removed,
+        on_all_removed = _on_all_notes_removed,
+        on_moved       = _on_note_moved,
     })
 end
 

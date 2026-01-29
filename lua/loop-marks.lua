@@ -54,6 +54,7 @@ function M.init()
     end
 
     require('loop-marks.bookmarksmonitor').init()
+    require('loop-marks.notesmonitor').init()
 end
 
 return M
