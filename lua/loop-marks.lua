@@ -10,7 +10,8 @@ local config = require("loop-marks.config")
 
 ---@type loop-marks.Config
 local DEFAULT_CONFIG = {
-    sign_priority = 50,
+    mark_sign_priority = 50,
+    note_sign_priority = 50,
     mark_symbol = "⚑",
     note_symbol = "✎",
 }

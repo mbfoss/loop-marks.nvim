@@ -9,7 +9,8 @@ local M           = {}
 
 local _init_done  = false
 
-local _sign_group = "notes"
+-- Define single sign
+local _sign_group
 
 ---@class loopmarks.NoteData
 ---@field note loopmarks.Note
@@ -36,8 +37,8 @@ end
 ---@param bm loopmarks.Note
 local function _place_note_sign(bm)
     local text = (" %s %s"):format(config.current.note_symbol, bm.text or "Note")
-    extmarks.place_file_extmark(bm.id, bm.file, bm.line, 0, _sign_group, {
-        virt_text = {{text, "Todo"}},
+    _sign_group.place_file_extmark(bm.id, bm.file, bm.line, 0, {
+        virt_text = { { text, "Todo" } },
         virt_text_pos = "eol",
     })
 end
@@ -53,7 +54,7 @@ end
 
 local function _on_note_removed(bm)
     _notes_data[bm.id] = nil
-    extmarks.remove_file_extmark(bm.id, _sign_group)
+    _sign_group.remove_extmark(bm.id)
 end
 
 local function _on_all_notes_removed(removed)
@@ -63,7 +64,7 @@ local function _on_all_notes_removed(removed)
         files[bm.file] = true
     end
     for file in pairs(files) do
-        extmarks.remove_file_extmarks(file, _sign_group)
+        _sign_group.remove_file_extmarks(file)
     end
 end
 
@@ -72,7 +73,7 @@ local function _on_note_moved(bm, _old_line)
     if not data then return end
     -- Neovim already moved the sign → we just re-place if needed (usually not required)
     -- But to be safe / consistent:
-    extmarks.remove_file_extmark(bm.id, _sign_group)
+    _sign_group.remove_extmark(bm.id)
     _place_note_sign(bm)
 end
 
@@ -130,18 +131,18 @@ function M.init()
 
     assert(config.current)
 
+    _sign_group =
+        extmarks.define_group("Notes", { priority = config.current.note_sign_priority },
+            function(file, marks)
+                for id, mark in pairs(marks) do
+                    -- Update note line to match sign
+                    notes.update_note_line(id, mark.lnum)
+                end
+            end)
+
     -- Highlight group (feel free to change link or define your own)
     local hl = "LoopmarksNotesSign"
     vim.api.nvim_set_hl(0, hl, { link = "Todo" }) -- or "Special", "WarningMsg", etc.
-
-    -- Define single sign
-    extmarks.define_group(_sign_group, { priority = config.current.sign_priority },
-        function(file, marks)
-            for id, mark in pairs(marks) do
-                -- Update note line to match sign
-                notes.update_note_line(id, mark.lnum)
-            end
-        end)
 
     notes.add_tracker({
         on_set         = _on_note_set,

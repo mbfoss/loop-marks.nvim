@@ -137,7 +137,7 @@ function M.init()
     vim.api.nvim_set_hl(0, hl, { link = "Todo" }) -- or "Special", "WarningMsg", etc.
 
     -- Define single sign
-    signsmgr.define_sign_group(_sign_group, config.current.sign_priority,
+    signsmgr.define_sign_group(_sign_group, config.current.mark_sign_priority,
         function(file, signs)
             for id, sign in pairs(signs) do
                 assert(sign.group == _sign_group)
