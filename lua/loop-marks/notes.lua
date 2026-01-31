@@ -3,7 +3,6 @@ local M = {}
 local Trackers = require("loop.tools.Trackers")
 local uitools = require("loop.tools.uitools")
 local floatwin = require("loop.tools.floatwin")
-local wsinfo = require('loop.wsinfo')
 
 ---@class loopmarks.Note
 ---@field id number
@@ -244,15 +243,12 @@ end
 ---@param command nil
 ---| "set"
 ---| "text"
----| "remove"
+---| "delete"
 ---| "clear_file"
 ---| "clear_all"
-function M.notes_command(command)
-    local ws_dir = wsinfo.get_ws_dir()
-    if not ws_dir then
-        vim.notify('No active workspace')
-        return
-    end
+---@param ws_dir string
+function M.notes_command(command, ws_dir)
+    assert(type(ws_dir) == "string")
     command = command and command:match("^%s*(.-)%s*$") or ""
     if command == "" or command == "set" then
         local file, line = uitools.get_current_file_and_line()
@@ -264,7 +260,7 @@ function M.notes_command(command)
                 end
             end)
         end
-    elseif command == "remove" then
+    elseif command == "delete" then
         local file, line = uitools.get_current_file_and_line()
         if file and line then
             M.remove_note(file, line)

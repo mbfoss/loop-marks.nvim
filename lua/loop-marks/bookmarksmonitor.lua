@@ -3,7 +3,6 @@ local bookmarks           = require('loop-marks.bookmarks')
 local signsmgr            = require('loop.signsmgr')
 local extmarks            = require('loop.extmarks')
 local selector            = require("loop.tools.selector")
-local wsinfo              = require("loop.wsinfo")
 local uitools             = require("loop.tools.uitools")
 
 local M                   = {}
@@ -20,9 +19,9 @@ local _bookmark_sign_name = "bookmark" -- single sign name
 local _bookmarks_data     = {}
 
 ---@param bm loopmarks.Bookmark
-local function _format_bookmark(bm)
+---@param wsdir string
+local function _format_bookmark(bm, wsdir)
     local file = bm.file
-    local wsdir = wsinfo.get_ws_dir()
     if wsdir then
         file = vim.fs.relpath(wsdir, file) or file
     end
@@ -82,13 +81,8 @@ end
 --  UI: Quick jump to any bookmark
 -- ──────────────────────────────────────────────────────────────────────────────
 
-function M.select_bookmark()
-    local ws_dir = wsinfo.get_ws_dir()
-    if not ws_dir then
-        vim.notify('No active workspace')
-        return
-    end
-
+---@param wsdir string
+function M.select_bookmark(wsdir)
     local bms = bookmarks.get_bookmarks()
     if #bms == 0 then
         vim.notify('No bookmarks set')
@@ -98,7 +92,7 @@ function M.select_bookmark()
     local choices = {}
     for _, bm in ipairs(bms) do
         table.insert(choices, {
-            label = _format_bookmark(bm),
+            label = _format_bookmark(bm, wsdir),
             file  = bm.file,
             line  = bm.line,
             data  = bm,

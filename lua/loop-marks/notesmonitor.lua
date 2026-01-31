@@ -2,7 +2,6 @@ local config      = require('loop-marks.config')
 local notes       = require('loop-marks.notes')
 local extmarks    = require('loop.extmarks')
 local selector    = require("loop.tools.selector")
-local wsinfo      = require("loop.wsinfo")
 local uitools     = require("loop.tools.uitools")
 
 local M           = {}
@@ -19,9 +18,9 @@ local _sign_group
 local _notes_data = {}
 
 ---@param bm loopmarks.Note
-local function _format_note(bm)
+---@param wsdir string
+local function _format_note(bm, wsdir)
     local file = bm.file
-    local wsdir = wsinfo.get_ws_dir()
     if wsdir then
         file = vim.fs.relpath(wsdir, file) or file
     end
@@ -81,13 +80,8 @@ end
 --  UI: Quick jump to any note
 -- ──────────────────────────────────────────────────────────────────────────────
 
-function M.select_note()
-    local ws_dir = wsinfo.get_ws_dir()
-    if not ws_dir then
-        vim.notify('No active workspace')
-        return
-    end
-
+---@param wsdir string
+function M.select_note(wsdir)
     local bms = notes.get_notes()
     if #bms == 0 then
         vim.notify('No notes set')
@@ -97,7 +91,7 @@ function M.select_note()
     local choices = {}
     for _, bm in ipairs(bms) do
         table.insert(choices, {
-            label = _format_note(bm),
+            label = _format_note(bm, wsdir),
             file  = bm.file,
             line  = bm.line,
             data  = bm,
