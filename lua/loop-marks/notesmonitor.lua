@@ -8,8 +8,7 @@ local M           = {}
 
 local _init_done  = false
 
--- Define single sign
-local _sign_group
+local _extmarks_group
 
 ---@class loopmarks.NoteData
 ---@field note loopmarks.Note
@@ -36,7 +35,7 @@ end
 ---@param bm loopmarks.Note
 local function _place_note_sign(bm)
     local text = (" %s %s"):format(config.current.note_symbol, bm.text or "Note")
-    _sign_group.place_file_extmark(bm.id, bm.file, bm.line, 0, {
+    _extmarks_group.place_file_extmark(bm.id, bm.file, bm.line, 0, {
         virt_text = { { text, "Todo" } },
         virt_text_pos = "eol",
     })
@@ -53,7 +52,7 @@ end
 
 local function _on_note_removed(bm)
     _notes_data[bm.id] = nil
-    _sign_group.remove_extmark(bm.id)
+    _extmarks_group.remove_extmark(bm.id)
 end
 
 local function _on_all_notes_removed(removed)
@@ -63,7 +62,7 @@ local function _on_all_notes_removed(removed)
         files[bm.file] = true
     end
     for file in pairs(files) do
-        _sign_group.remove_file_extmarks(file)
+        _extmarks_group.remove_file_extmarks(file)
     end
 end
 
@@ -72,7 +71,7 @@ local function _on_note_moved(bm, _old_line)
     if not data then return end
     -- Neovim already moved the sign → we just re-place if needed (usually not required)
     -- But to be safe / consistent:
-    _sign_group.remove_extmark(bm.id)
+    _extmarks_group.remove_extmark(bm.id)
     _place_note_sign(bm)
 end
 
@@ -125,7 +124,7 @@ function M.init()
 
     assert(config.current)
 
-    _sign_group =
+    _extmarks_group =
         extmarks.define_group("Notes", { priority = config.current.note_sign_priority },
             function(file, marks)
                 for id, mark in pairs(marks) do

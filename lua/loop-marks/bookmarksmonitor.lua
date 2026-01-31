@@ -1,13 +1,13 @@
 local config              = require('loop-marks.config')
 local bookmarks           = require('loop-marks.bookmarks')
 local signsmgr            = require('loop.signsmgr')
-local extmarks            = require('loop.extmarks')
 local selector            = require("loop.tools.selector")
 local uitools             = require("loop.tools.uitools")
 
 local M                   = {}
 
 local _init_done          = false
+
 
 local _sign_group         = "bookmarks"
 local _bookmark_sign_name = "bookmark" -- single sign name
@@ -54,7 +54,7 @@ end
 
 local function _on_bookmark_removed(bm)
     _bookmarks_data[bm.id] = nil
-    extmarks.remove_file_extmark(bm.id, _sign_group)
+    signsmgr.remove_file_sign(bm.id, _sign_group)
 end
 
 local function _on_all_bookmarks_removed(removed)
@@ -64,7 +64,7 @@ local function _on_all_bookmarks_removed(removed)
         files[bm.file] = true
     end
     for file in pairs(files) do
-        extmarks.remove_file_extmarks(file, _sign_group)
+        signsmgr.remove_file_signs(file, _sign_group)
     end
 end
 
