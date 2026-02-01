@@ -268,7 +268,7 @@ function M.bookmarks_command(command, ws_dir)
     elseif command == "name" then
         local file, line = uitools.get_current_file_and_line()
         if file and line then
-           floatwin.input_at_cursor({ prompt = "Nookmark name" }, function(message)
+           floatwin.input_at_cursor({ prompt = "Bookmark name" }, function(message)
                 if message and message ~= "" then
                     M.set_named_bookmark(file, line, message)
                 end
