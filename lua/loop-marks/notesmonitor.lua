@@ -36,8 +36,9 @@ end
 local function _place_note_sign(bm)
     local text = (" %s %s"):format(config.current.note_symbol, bm.text or "Note")
     _extmarks_group.place_file_extmark(bm.id, bm.file, bm.line, 0, {
-        virt_text = { { text, "Todo" } },
+        virt_text     = { { text, "Todo" } },
         virt_text_pos = "eol",
+        hl_mode       = "combine",
     })
 end
 
