@@ -1,15 +1,17 @@
-local config              = require('loop-marks.config')
-local bookmarks           = require('loop-marks.bookmarks')
-local signsmgr            = require('loop.signsmgr')
-local selector            = require("loop.tools.selector")
-local uitools             = require("loop.tools.uitools")
+local config     = require('loop-marks.config')
+local bookmarks  = require('loop-marks.bookmarks')
+local loopsigns  = require('loop.signs')
+local selector   = require("loop.tools.selector")
+local uitools    = require("loop.tools.uitools")
 
-local M                   = {}
+local M          = {}
 
-local _init_done          = false
+local _init_done = false
 
 
-local _sign_group         = "bookmarks"
+---@type loop.signs.Group
+local _sign_group
+
 local _bookmark_sign_name = "bookmark" -- single sign name
 
 ---@class loopmarks.BookmarkData
@@ -40,7 +42,7 @@ end
 
 ---@param bm loopmarks.Bookmark
 local function _place_bookmark_sign(bm)
-    signsmgr.place_file_sign(bm.id, bm.file, bm.line, _sign_group, _bookmark_sign_name)
+    _sign_group.place_file_sign(bm.id, bm.file, bm.line, _bookmark_sign_name)
 end
 
 -- ──────────────────────────────────────────────────────────────────────────────
@@ -54,7 +56,7 @@ end
 
 local function _on_bookmark_removed(bm)
     _bookmarks_data[bm.id] = nil
-    signsmgr.remove_file_sign(bm.id, _sign_group)
+    _sign_group.remove_file_sign(bm.id)
 end
 
 local function _on_all_bookmarks_removed(removed)
@@ -64,7 +66,7 @@ local function _on_all_bookmarks_removed(removed)
         files[bm.file] = true
     end
     for file in pairs(files) do
-        signsmgr.remove_file_signs(file, _sign_group)
+        _sign_group.remove_file_signs(file)
     end
 end
 
@@ -73,7 +75,7 @@ local function _on_bookmark_moved(bm, _old_line)
     if not data then return end
     -- Neovim already moved the sign → we just re-place if needed (usually not required)
     -- But to be safe / consistent:
-    signsmgr.remove_file_sign(bm.id, _sign_group)
+    _sign_group.remove_file_sign(bm.id)
     _place_bookmark_sign(bm)
 end
 
@@ -131,21 +133,15 @@ function M.init()
     vim.api.nvim_set_hl(0, hl, { link = "Todo" }) -- or "Special", "WarningMsg", etc.
 
     -- Define single sign
-    signsmgr.define_sign_group(_sign_group, config.current.mark_sign_priority,
+    _sign_group = loopsigns.define_group("bookmarks", { priority = config.current.mark_sign_priority },
         function(file, signs)
             for id, sign in pairs(signs) do
-                assert(sign.group == _sign_group)
                 -- Update bookmark line to match sign
                 bookmarks.update_bookmark_line(id, sign.lnum)
             end
         end)
 
-    signsmgr.define_sign(
-        _sign_group,
-        _bookmark_sign_name,
-        config.current.mark_symbol,
-        hl
-    )
+    _sign_group.define_sign(_bookmark_sign_name, config.current.mark_symbol, hl)
 
     bookmarks.add_tracker({
         on_set         = _on_bookmark_set,
