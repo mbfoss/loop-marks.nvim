@@ -130,7 +130,7 @@ function M.init()
 
     -- Highlight group (feel free to change link or define your own)
     local hl = "LoopmarksBookmarksSign"
-    vim.api.nvim_set_hl(0, hl, { link = "Todo" }) -- or "Special", "WarningMsg", etc.
+    vim.api.nvim_set_hl(0, hl, { link = "Directory" }) -- or "Special", "WarningMsg", etc.
 
     -- Define single sign
     _sign_group = loopsigns.define_group("bookmarks", { priority = config.current.mark_sign_priority },
